@@ -1,30 +1,143 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-  <meta charset="utf-8" />
-  <title>Young Innovators STEM Lab</title>
-  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+  <meta charset="utf-8">
+  <title>VR Asteroid Shooter</title>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 </head>
 
 <body>
-  <a-scene>
+<a-scene id="scene">
 
-    <a-sky color=""></a-sky>
-    <a-box position="-1 -0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
-    <a-sphere position="0 0.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
-    <a-cylinder position="1 -0.25 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
-    <a-plane position="0 -1 -4" rotation="-90 0 0" width="4" height="4" color="#7BC8A4"></a-plane>
-    
-    <a-image src="https://uploads.dailydot.com/2024/12/FaStfat2-2024_Memes.jpg?q=65&auto=format&w=1200&ar=2:1&fit=crop" position="0 5 -10"
-      width="25" height="7.5"></a-image>
-    
-    <a-text value="Young Innovators STEM Lab" position="0 9.5 -10" align="center" color="white" font="mozillavr"
-      width="10" height="5" anchor="center">
-    </a-text>
+  <!-- Camera -->
+  <a-entity id="player" camera position="0 1.6 0" look-controls>
+    <a-cursor 
+      color="red"
+      rayOrigin="mouse"
+      fuse="true"
+      fuse-timeout="300">
+    </a-cursor>
+  </a-entity>
 
+  <!-- Score -->
+  <a-text id="scoreText"
+          value="Score: 0"
+          position="-1 2 -3"
+          color="yellow"
+          width="4">
+  </a-text>
 
-  </a-scene>
+  <!-- Lights -->
+  <a-light type="ambient" intensity="0.5"></a-light>
+  <a-light type="point" position="2 4 4"></a-light>
+
+  <!-- Background -->
+  <a-sky color="#000"></a-sky>
+
+</a-scene>
+
+<script>
+let score = 0;
+
+const scene = document.querySelector('#scene');
+const scoreText = document.querySelector('#scoreText');
+const camera = document.querySelector('#player');
+
+// WAIT until scene is loaded
+scene.addEventListener('loaded', () => {
+
+  // Spawn asteroids
+  setInterval(() => {
+    let asteroid = document.createElement('a-sphere');
+
+    asteroid.setAttribute('radius', 0.3);
+    asteroid.setAttribute('color', '#888');
+    asteroid.setAttribute('class', 'asteroid');
+
+    asteroid.setAttribute('position', {
+      x: (Math.random() - 0.5) * 6,
+      y: Math.random() * 3 + 1,
+      z: -6
+    });
+
+    scene.appendChild(asteroid);
+
+    let move = setInterval(() => {
+      let pos = asteroid.getAttribute('position');
+      pos.z += 0.03;
+      asteroid.setAttribute('position', pos);
+
+      if (pos.z > 1) {
+        asteroid.remove();
+        clearInterval(move);
+      }
+    }, 50);
+
+  }, 1500);
+
+  // SHOOT (WORKING)
+  function shoot() {
+
+    let bullet = document.createElement('a-sphere');
+
+    bullet.setAttribute('radius', 0.05);
+    bullet.setAttribute('color', 'red');
+
+    // Get camera position
+    let pos = camera.getAttribute('position');
+    bullet.setAttribute('position', pos);
+
+    scene.appendChild(bullet);
+
+    // Get direction AFTER a frame (important!)
+    setTimeout(() => {
+      let direction = new THREE.Vector3();
+      camera.object3D.getWorldDirection(direction);
+
+      let move = setInterval(() => {
+        let bpos = bullet.getAttribute('position');
+
+        bpos.x += direction.x * 0.4;
+        bpos.y += direction.y * 0.4;
+        bpos.z += direction.z * 0.4;
+
+        bullet.setAttribute('position', bpos);
+
+        // Collision
+        document.querySelectorAll('.asteroid').forEach(a => {
+          let apos = a.getAttribute('position');
+
+          let dx = bpos.x - apos.x;
+          let dy = bpos.y - apos.y;
+          let dz = bpos.z - apos.z;
+
+          let dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+          if (dist < 0.4) {
+            a.remove();
+            bullet.remove();
+            clearInterval(move);
+
+            score++;
+            scoreText.setAttribute('value', 'Score: ' + score);
+          }
+        });
+
+        if (Math.abs(bpos.z) > 20) {
+          bullet.remove();
+          clearInterval(move);
+        }
+
+      }, 50);
+    }, 50);
+  }
+
+  // EVENTS (this is the real fix)
+  document.addEventListener('click', shoot);     // desktop
+  document.addEventListener('touchstart', shoot); // mobile
+});
+
+</script>
+
 </body>
-
 </html>
